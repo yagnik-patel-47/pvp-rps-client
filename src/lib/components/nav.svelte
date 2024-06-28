@@ -7,7 +7,6 @@
 	import { signIn, signOut } from "@auth/sveltekit/client";
 	import * as Avatar from "$lib/components/ui/avatar";
 	import { getInitialsFromFullName } from "$lib";
-	import { socket } from "$lib";
 </script>
 
 <nav class="px-8 lg:px-96 py-12 space-y-6">
@@ -23,7 +22,7 @@
 				<a href="/" class={`${buttonVariants({ variant: "link" })}`}>Back</a>
 			{/if}
 			{#if $page.data.session}
-				<Popover.Root positioning={{ placement: "bottom-end" }}>
+				<Popover.Root>
 					<Popover.Trigger>
 						<Avatar.Root>
 							<Avatar.Image
@@ -35,7 +34,7 @@
 							>
 						</Avatar.Root>
 					</Popover.Trigger>
-					<Popover.Content class="space-y-3">
+					<Popover.Content class="space-y-3" align="end" sideOffset={10} alignOffset={10}>
 						<p class="font-medium text-lg">{$page.data.session.user?.name}</p>
 						<p class="font-medium">{$page.data.session.user?.email}</p>
 						<Button variant="secondary" on:click={() => signOut()} class="w-full">Logout</Button>
