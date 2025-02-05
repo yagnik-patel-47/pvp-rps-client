@@ -4,13 +4,14 @@
 	import ScissorIcon from "$lib/assets/icon-scissors.svg";
 	import RockIcon from "$lib/assets/icon-rock.svg";
 	import GridBg from "$lib/assets/bg-triangle.svg";
-	import { onDestroy, tick } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
 	import { Flip } from "gsap/dist/Flip";
-	import { socket, type GameState } from "$lib";
+	import { ws, type Player } from "$lib";
 	import { gameState } from "$lib/store/game-state";
 	import { Terminal } from "lucide-svelte";
 	import * as Alert from "$lib/components/ui/alert";
 	import { Button } from "$lib/components/ui/button";
+	import { page } from "$app/stores";
 
 	const choiceLib = {
 		rock: {
@@ -74,7 +75,11 @@
 				"hsl(230,89%,62%)",
 				"hsl(39,89%,49%)"
 			][imageIndex];
-			imageIndex === 2 ? (imageIndex = 0) : (imageIndex += 1);
+			if (imageIndex === 2) {
+				imageIndex = 0;
+			} else {
+				imageIndex += 1;
+			}
 		}
 	};
 
@@ -82,42 +87,52 @@
 
 	onDestroy(() => {
 		clearInterval(intervalID);
-		socket.emit("announceLeave", $gameState?.id);
+		ws.send(JSON.stringify({ type: "announce_left", game: { id: $gameState?.id } }));
 		gameState.set(null);
 	});
 
-	socket.on("selectChoice", () => {
-		loading = false;
-		showResult = false;
-		showPicked = false;
-		if ($gameState)
-			gameState.set({
-				...$gameState,
-				currentRound: undefined
-			});
+	onMount(() => {
+		ws.onmessage = (event: MessageEvent) => {
+			const data = JSON.parse(event.data);
+			if (data.type === "select_choice") {
+				loading = false;
+				showResult = false;
+				showPicked = false;
+				if ($gameState)
+					gameState.set({
+						...$gameState,
+						currentRound: undefined
+					});
+			}
+			if (data.type === "announce_winner") {
+				console.log(data.game, $page.data.session?.user?.email);
+
+				if (data.game.currentRound?.winner === $page.data.session?.user?.email) {
+					score++;
+				}
+				gameState.set(data.game);
+				const opponentFound = data.game.players.find(
+					(player: Player) => player.email !== $page.data.session?.user?.email
+				);
+				if (opponentFound) {
+					opponentId = opponentFound.email;
+				}
+				showResult = true;
+				clearInterval(intervalID);
+			}
+			if (data.type === "opp_left_game") {
+				showAlert = true;
+			}
+		};
 	});
 
-	$: if (showResult && opponentChoiceImage && opponentChoiceButton && opponentId) {
-		opponentChoiceImage.src = choiceLib[$gameState!.currentRound!.choices![opponentId]].image;
+	$: if (showResult && opponentChoiceImage && opponentChoiceButton && opponentId && $gameState) {
+		console.log("opponentId", opponentId);
+
+		opponentChoiceImage.src = choiceLib[$gameState.currentRound!.choices![opponentId]].image;
 		opponentChoiceButton.style.borderColor =
-			choiceLib[$gameState!.currentRound!.choices![opponentId]].color;
+			choiceLib[$gameState.currentRound!.choices![opponentId]].color;
 	}
-
-	socket.on("announceWinner", (state: GameState) => {
-		if (state.currentRound?.winner === socket.id) {
-			score++;
-		}
-		gameState.set(state);
-		$gameState?.players.forEach((player) => {
-			if (player.socketid !== socket.id) opponentId = player.socketid;
-		});
-		showResult = true;
-		clearInterval(intervalID);
-	});
-
-	socket.on("oppLeftGame", () => {
-		showAlert = true;
-	});
 </script>
 
 <header
@@ -160,7 +175,9 @@
 						fanimate(".paper-btn");
 						choicePicked = "paper";
 						intervalID = setInterval(imageAnimate, 300);
-						socket.emit("choiceSelected", "paper");
+						ws.send(
+							JSON.stringify({ type: "make_choice", choice: "paper", game: { id: $gameState?.id } })
+						);
 					}}
 					data-flip-id="paper-btn"
 				>
@@ -177,7 +194,13 @@
 						fanimate(".scissor-btn");
 						choicePicked = "scissor";
 						intervalID = setInterval(imageAnimate, 300);
-						socket.emit("choiceSelected", "scissor");
+						ws.send(
+							JSON.stringify({
+								type: "make_choice",
+								choice: "scissor",
+								game: { id: $gameState?.id }
+							})
+						);
 					}}
 					data-flip-id="scissor-btn"
 				>
@@ -194,7 +217,9 @@
 						fanimate(".rock-btn");
 						choicePicked = "rock";
 						intervalID = setInterval(imageAnimate, 300);
-						socket.emit("choiceSelected", "rock");
+						ws.send(
+							JSON.stringify({ type: "make_choice", choice: "rock", game: { id: $gameState?.id } })
+						);
 					}}
 					data-flip-id="rock-btn"
 				>
@@ -218,8 +243,8 @@
 							choiceLib[choicePicked].label === "Paper Button"
 								? "border-[hsl(230,89%,62%)]"
 								: choiceLib[choicePicked].label === "Rock Button"
-								? "border-[hsl(349,71%,52%)]"
-								: "border-[hsl(39,89%,49%)]"
+									? "border-[hsl(349,71%,52%)]"
+									: "border-[hsl(39,89%,49%)]"
 						} border-[16px] md:border-[25px] xl:border-[30px] w-fit rock-btn scissor-btn paper-btn`}
 						data-flip-id={choiceLib[choicePicked].flip_id}
 					>
@@ -235,9 +260,9 @@
 						<p class="text-2xl md:text-4xl lg:text-6xl font-semibold text-center">
 							{$gameState?.currentRound?.winner === "tie"
 								? "TIE!"
-								: $gameState?.currentRound?.winner === socket.id
-								? "YOU WIN!"
-								: "YOU LOSE!"}
+								: $gameState?.currentRound?.winner === $page.data.session?.user?.email
+									? "YOU WIN!"
+									: "YOU LOSE!"}
 						</p>
 						<p class="text-xl xl:text-3xl font-semibold">Next Round Starting In 3s...</p>
 					</div>

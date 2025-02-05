@@ -1,5 +1,5 @@
 // place files you want to import through the `$lib` alias in this folder.
-export { socket } from "./socket-client";
+export { ws } from "./socket-client";
 
 export function getInitialsFromFullName(fullName: string | null | undefined) {
 	if (fullName) {
@@ -15,17 +15,14 @@ export interface GameState {
 	id: string;
 	players: Player[];
 	state: "waiting" | "started";
-	records?: RoundRecord[] | undefined;
-	currentRound?:
-		| {
-				choices?:
-					| {
-							[key: string]: Choice;
-					  }
-					| undefined;
-				winner?: string | undefined;
-		  }
-		| undefined;
+	records?: RoundRecord[];
+	currentRound?: {
+		choices?: {
+			[key: string]: Choice;
+		};
+		winner?: string;
+	};
+	public: boolean;
 }
 
 interface RoundRecord {
@@ -33,7 +30,6 @@ interface RoundRecord {
 }
 
 export interface Player {
-	socketid: string;
 	name: string;
 	avatar: string;
 	email: string;

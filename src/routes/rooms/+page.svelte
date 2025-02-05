@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { socket, type GameState } from "$lib";
+	import { ws } from "$lib";
 	import Nav from "$lib/components/nav.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import { Skeleton } from "$lib/components/ui/skeleton";
@@ -8,29 +8,32 @@
 	import { gameState } from "$lib/store/game-state";
 	import { goto } from "$app/navigation";
 
-	let rooms: { id: string; status: string }[] = [],
+	let rooms: { id: string; state: string }[] = [],
 		showData = false;
 
-	socket.on("sendRooms", (roomsData: { id: string; status: string }[]) => {
-		rooms = roomsData;
-		showData = true;
-	});
-
-	socket.on("getRoomData", (data: GameState) => {
-		gameState.set(data);
-		goto("/lobby");
-	});
-
-	socket.on("roomIsFull", () => {
-		alert("Room is already full.");
-	});
-
-	socket.on("roomIsStarted", () => {
-		alert("Game is already started.");
-	});
-
 	onMount(() => {
-		socket.emit("getRooms");
+		ws.send(JSON.stringify({ type: "fetch_public_rooms" }));
+
+		ws.onmessage = (event) => {
+			const data = JSON.parse(event.data);
+			if (data.type === "get_public_rooms") {
+				rooms = data.rooms;
+				showData = true;
+			}
+			if (data.type === "room_not_found") {
+				alert("No room found with entered code.");
+			}
+			if (data.type === "room_is_full") {
+				alert("Room is already full.");
+			}
+			if (data.type === "room_is_started") {
+				alert("Game is already started.");
+			}
+			if (data.type === "get_room_data") {
+				gameState.set(data.data);
+				goto("/lobby");
+			}
+		};
 	});
 </script>
 
@@ -48,21 +51,25 @@
 				class="bg-neutral-800 text-lg flex justify-around w-full p-4 mt-10 rounded-md items-center"
 			>
 				<span>Room ID: {room.id}</span>
-				<span>Status: {room.status}</span>
+				<span>Status: {room.state}</span>
 				<Button
 					on:click={() => {
 						if ($page.data.session) {
-							socket.emit("initGame");
 							gameState.set(null);
-							socket.emit("joinGame", room.id, {
-								socketid: socket.id,
-								email: $page.data.session.user?.email,
-								name: $page.data.session.user?.name,
-								avatar: $page.data.session.user?.image
-							});
+							ws.send(
+								JSON.stringify({
+									type: "join_room",
+									roomId: room.id,
+									player: {
+										email: $page.data.session.user?.email,
+										name: $page.data.session.user?.name,
+										avatar: $page.data.session.user?.image
+									}
+								})
+							);
 						}
 					}}
-					disabled={room.status === "started"}>Join</Button
+					disabled={room.state === "started"}>Join</Button
 				>
 			</div>
 		{/each}

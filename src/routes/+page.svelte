@@ -6,25 +6,33 @@
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
 	import { Checkbox } from "$lib/components/ui/checkbox";
-	import { socket, type GameState } from "$lib";
+	import { ws } from "$lib";
 	import { page } from "$app/stores";
 	import { goto } from "$app/navigation";
 	import { gameState } from "$lib/store/game-state";
-	let showInLobby = false;
+	import { onMount } from "svelte";
+	let showInLobby = true;
 	let joinCode = "";
 
-	socket.on("roomNotFound", () => {
-		alert("No room found with entered code.");
-	});
-	socket.on("roomIsFull", () => {
-		alert("Room is already full.");
-	});
-	socket.on("roomIsStarted", () => {
-		alert("Game is already started.");
-	});
-	socket.on("getRoomData", (data: GameState) => {
-		gameState.set(data);
-		goto("/lobby");
+	onMount(() => {
+		if (ws) {
+			ws.onmessage = (event: MessageEvent) => {
+				const data = JSON.parse(event.data);
+				if (data.type === "room_not_found") {
+					alert("No room found with entered code.");
+				}
+				if (data.type === "room_is_full") {
+					alert("Room is already full.");
+				}
+				if (data.type === "room_is_started") {
+					alert("Game is already started.");
+				}
+				if (data.type === "get_room_data") {
+					gameState.set(data.data);
+					goto("/lobby");
+				}
+			};
+		}
 	});
 </script>
 
@@ -53,14 +61,18 @@
 					<Button
 						on:click={() => {
 							if ($page.data.session) {
-								socket.emit("initGame");
 								gameState.set(null);
-								socket.emit("joinGame", joinCode, {
-									socketid: socket.id,
-									email: $page.data.session.user?.email,
-									name: $page.data.session.user?.name,
-									avatar: $page.data.session.user?.image
-								});
+								ws.send(
+									JSON.stringify({
+										type: "join_room",
+										roomId: joinCode,
+										player: {
+											email: $page.data.session.user?.email,
+											name: $page.data.session.user?.name,
+											avatar: $page.data.session.user?.image
+										}
+									})
+								);
 							}
 						}}>Join</Button
 					>
@@ -92,14 +104,18 @@
 					<Button
 						on:click={() => {
 							if ($page.data.session) {
-								socket.emit("initGame");
 								gameState.set(null);
-								socket.emit("createLobby", {
-									socketid: socket.id,
-									email: $page.data.session.user?.email,
-									name: $page.data.session.user?.name,
-									avatar: $page.data.session.user?.image
-								});
+								ws.send(
+									JSON.stringify({
+										type: "create_room",
+										player: {
+											email: $page.data.session.user?.email,
+											name: $page.data.session.user?.name,
+											avatar: $page.data.session.user?.image
+										},
+										public: showInLobby
+									})
+								);
 							}
 						}}>Create</Button
 					>
