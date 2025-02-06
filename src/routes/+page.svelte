@@ -14,6 +14,10 @@
 	let showInLobby = true;
 	let joinCode = "";
 
+	ws.onopen = () => {
+		ws.send(JSON.stringify({ type: "store_email", email: $page.data.session?.user?.email }));
+	};
+
 	onMount(() => {
 		if (ws) {
 			ws.onmessage = (event: MessageEvent) => {
