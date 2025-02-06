@@ -12,28 +12,30 @@
 		showData = false;
 
 	onMount(() => {
-		ws.send(JSON.stringify({ type: "fetch_public_rooms" }));
+		if (ws) {
+			ws.send(JSON.stringify({ type: "fetch_public_rooms" }));
 
-		ws.onmessage = (event) => {
-			const data = JSON.parse(event.data);
-			if (data.type === "get_public_rooms") {
-				rooms = data.rooms;
-				showData = true;
-			}
-			if (data.type === "room_not_found") {
-				alert("No room found with entered code.");
-			}
-			if (data.type === "room_is_full") {
-				alert("Room is already full.");
-			}
-			if (data.type === "room_is_started") {
-				alert("Game is already started.");
-			}
-			if (data.type === "get_room_data") {
-				gameState.set(data.data);
-				goto("/lobby");
-			}
-		};
+			ws.onmessage = (event) => {
+				const data = JSON.parse(event.data);
+				if (data.type === "get_public_rooms") {
+					rooms = data.rooms;
+					showData = true;
+				}
+				if (data.type === "room_not_found") {
+					alert("No room found with entered code.");
+				}
+				if (data.type === "room_is_full") {
+					alert("Room is already full.");
+				}
+				if (data.type === "room_is_started") {
+					alert("Game is already started.");
+				}
+				if (data.type === "get_room_data") {
+					gameState.set(data.data);
+					goto("/lobby");
+				}
+			};
+		}
 	});
 </script>
 
@@ -56,7 +58,7 @@
 					on:click={() => {
 						if ($page.data.session) {
 							gameState.set(null);
-							ws.send(
+							ws?.send(
 								JSON.stringify({
 									type: "join_room",
 									roomId: room.id,

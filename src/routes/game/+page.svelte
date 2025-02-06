@@ -83,47 +83,49 @@
 		}
 	};
 
-	let intervalID: number;
+	let intervalID: NodeJS.Timeout;
 
 	onDestroy(() => {
 		clearInterval(intervalID);
-		ws.send(JSON.stringify({ type: "announce_left", game: { id: $gameState?.id } }));
+		ws?.send(JSON.stringify({ type: "announce_left", game: { id: $gameState?.id } }));
 		gameState.set(null);
 	});
 
 	onMount(() => {
-		ws.onmessage = (event: MessageEvent) => {
-			const data = JSON.parse(event.data);
-			if (data.type === "select_choice") {
-				loading = false;
-				showResult = false;
-				showPicked = false;
-				if ($gameState)
-					gameState.set({
-						...$gameState,
-						currentRound: undefined
-					});
-			}
-			if (data.type === "announce_winner") {
-				console.log(data.game, $page.data.session?.user?.email);
+		if (ws) {
+			ws.onmessage = (event: MessageEvent) => {
+				const data = JSON.parse(event.data);
+				if (data.type === "select_choice") {
+					loading = false;
+					showResult = false;
+					showPicked = false;
+					if ($gameState)
+						gameState.set({
+							...$gameState,
+							currentRound: undefined
+						});
+				}
+				if (data.type === "announce_winner") {
+					console.log(data.game, $page.data.session?.user?.email);
 
-				if (data.game.currentRound?.winner === $page.data.session?.user?.email) {
-					score++;
+					if (data.game.currentRound?.winner === $page.data.session?.user?.email) {
+						score++;
+					}
+					gameState.set(data.game);
+					const opponentFound = data.game.players.find(
+						(player: Player) => player.email !== $page.data.session?.user?.email
+					);
+					if (opponentFound) {
+						opponentId = opponentFound.email;
+					}
+					showResult = true;
+					clearInterval(intervalID);
 				}
-				gameState.set(data.game);
-				const opponentFound = data.game.players.find(
-					(player: Player) => player.email !== $page.data.session?.user?.email
-				);
-				if (opponentFound) {
-					opponentId = opponentFound.email;
+				if (data.type === "opp_left_game") {
+					showAlert = true;
 				}
-				showResult = true;
-				clearInterval(intervalID);
-			}
-			if (data.type === "opp_left_game") {
-				showAlert = true;
-			}
-		};
+			};
+		}
 	});
 
 	$: if (showResult && opponentChoiceImage && opponentChoiceButton && opponentId && $gameState) {
@@ -175,7 +177,7 @@
 						fanimate(".paper-btn");
 						choicePicked = "paper";
 						intervalID = setInterval(imageAnimate, 300);
-						ws.send(
+						ws?.send(
 							JSON.stringify({ type: "make_choice", choice: "paper", game: { id: $gameState?.id } })
 						);
 					}}
@@ -194,7 +196,7 @@
 						fanimate(".scissor-btn");
 						choicePicked = "scissor";
 						intervalID = setInterval(imageAnimate, 300);
-						ws.send(
+						ws?.send(
 							JSON.stringify({
 								type: "make_choice",
 								choice: "scissor",
@@ -217,7 +219,7 @@
 						fanimate(".rock-btn");
 						choicePicked = "rock";
 						intervalID = setInterval(imageAnimate, 300);
-						ws.send(
+						ws?.send(
 							JSON.stringify({ type: "make_choice", choice: "rock", game: { id: $gameState?.id } })
 						);
 					}}

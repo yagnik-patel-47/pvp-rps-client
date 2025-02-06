@@ -14,9 +14,10 @@
 	let showInLobby = true;
 	let joinCode = "";
 
-	ws.onopen = () => {
-		ws.send(JSON.stringify({ type: "store_email", email: $page.data.session?.user?.email }));
-	};
+	if (ws)
+		ws.onopen = () => {
+			ws?.send(JSON.stringify({ type: "store_email", email: $page.data.session?.user?.email }));
+		};
 
 	onMount(() => {
 		if (ws) {
@@ -66,7 +67,7 @@
 						on:click={() => {
 							if ($page.data.session) {
 								gameState.set(null);
-								ws.send(
+								ws?.send(
 									JSON.stringify({
 										type: "join_room",
 										roomId: joinCode,
@@ -109,7 +110,7 @@
 						on:click={() => {
 							if ($page.data.session) {
 								gameState.set(null);
-								ws.send(
+								ws?.send(
 									JSON.stringify({
 										type: "create_room",
 										player: {

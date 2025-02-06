@@ -22,7 +22,7 @@
 					}
 					setTimeout(() => {
 						goto("/game", { replaceState: true });
-						ws.send(JSON.stringify({ type: "lobby_to_game", game: { id: $gameState?.id } }));
+						ws?.send(JSON.stringify({ type: "lobby_to_game", game: { id: $gameState?.id } }));
 					}, 2000);
 					// goto("/game", { replaceState: true });
 					// ws.send(JSON.stringify({ type: "lobby_to_game", game: { id: $gameState?.id } }));
