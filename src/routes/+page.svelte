@@ -66,18 +66,24 @@
 					<Button
 						on:click={() => {
 							if ($page.data.session) {
-								gameState.set(null);
-								ws?.send(
-									JSON.stringify({
-										type: "join_room",
-										roomId: joinCode,
-										player: {
-											email: $page.data.session.user?.email,
-											name: $page.data.session.user?.name,
-											avatar: $page.data.session.user?.image
-										}
-									})
-								);
+								if (ws?.readyState === WebSocket.OPEN) {
+									gameState.set(null);
+									ws?.send(
+										JSON.stringify({
+											type: "join_room",
+											roomId: joinCode,
+											player: {
+												email: $page.data.session.user?.email,
+												name: $page.data.session.user?.name,
+												avatar: $page.data.session.user?.image
+											}
+										})
+									);
+								} else if (ws?.readyState === WebSocket.CONNECTING) {
+									alert("Connection is not ready yet. Please wait.");
+								} else {
+									alert("Connection is closed. Please refresh the page.");
+								}
 							}
 						}}>Join</Button
 					>
@@ -109,18 +115,24 @@
 					<Button
 						on:click={() => {
 							if ($page.data.session) {
-								gameState.set(null);
-								ws?.send(
-									JSON.stringify({
-										type: "create_room",
-										player: {
-											email: $page.data.session.user?.email,
-											name: $page.data.session.user?.name,
-											avatar: $page.data.session.user?.image
-										},
-										public: showInLobby
-									})
-								);
+								if (ws?.readyState === WebSocket.OPEN) {
+									gameState.set(null);
+									ws?.send(
+										JSON.stringify({
+											type: "create_room",
+											player: {
+												email: $page.data.session.user?.email,
+												name: $page.data.session.user?.name,
+												avatar: $page.data.session.user?.image
+											},
+											public: showInLobby
+										})
+									);
+								} else if (ws?.readyState === WebSocket.CONNECTING) {
+									alert("Connection is not ready yet. Please wait.");
+								} else {
+									alert("Connection is closed. Please refresh the page.");
+								}
 							}
 						}}>Create</Button
 					>

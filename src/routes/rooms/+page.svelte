@@ -12,7 +12,7 @@
 		showData = false;
 
 	onMount(() => {
-		if (ws) {
+		if (ws?.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify({ type: "fetch_public_rooms" }));
 
 			ws.onmessage = (event) => {
@@ -35,6 +35,10 @@
 					goto("/lobby");
 				}
 			};
+		} else if (ws?.readyState === WebSocket.CONNECTING) {
+			alert("Connection is not ready yet. Please wait.");
+		} else {
+			alert("Connection is closed. Please refresh the page.");
 		}
 	});
 </script>
