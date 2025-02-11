@@ -7,11 +7,19 @@
 	import { page } from "$app/stores";
 	import { gameState } from "$lib/store/game-state";
 	import { goto } from "$app/navigation";
+	import ServerWait from "$lib/components/server-wait.svelte";
 
 	let rooms: { id: string; state: string }[] = [],
 		showData = false;
+	let connectionLoading = false;
 
 	onMount(() => {
+		if (ws?.readyState === WebSocket.CONNECTING) {
+			connectionLoading = true;
+		} else {
+			connectionLoading = false;
+		}
+
 		if (ws?.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify({ type: "fetch_public_rooms" }));
 
@@ -35,14 +43,15 @@
 					goto("/lobby");
 				}
 			};
-		} else if (ws?.readyState === WebSocket.CONNECTING) {
-			alert("Connection is not ready yet. Please wait.");
-		} else {
+		} else if (ws?.readyState === WebSocket.CLOSED) {
 			alert("Connection is closed. Please refresh the page.");
 		}
 	});
 </script>
 
+{#if connectionLoading}
+	<ServerWait />
+{/if}
 <header>
 	<Nav />
 </header>

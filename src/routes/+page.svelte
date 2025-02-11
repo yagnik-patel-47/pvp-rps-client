@@ -11,8 +11,10 @@
 	import { goto } from "$app/navigation";
 	import { gameState } from "$lib/store/game-state";
 	import { onMount } from "svelte";
+	import ServerWait from "$lib/components/server-wait.svelte";
 	let showInLobby = true;
 	let joinCode = "";
+	let connectionLoading = false;
 
 	if (ws)
 		ws.onopen = () => {
@@ -21,6 +23,12 @@
 
 	onMount(() => {
 		if (ws) {
+			if (ws.readyState === WebSocket.CONNECTING) {
+				connectionLoading = true;
+			} else {
+				connectionLoading = false;
+			}
+
 			ws.onmessage = (event: MessageEvent) => {
 				const data = JSON.parse(event.data);
 				if (data.type === "room_not_found") {
@@ -41,6 +49,9 @@
 	});
 </script>
 
+{#if connectionLoading}
+	<ServerWait />
+{/if}
 <header>
 	<Nav />
 </header>
@@ -79,8 +90,6 @@
 											}
 										})
 									);
-								} else if (ws?.readyState === WebSocket.CONNECTING) {
-									alert("Connection is not ready yet. Please wait.");
 								} else {
 									alert("Connection is closed. Please refresh the page.");
 								}
@@ -128,8 +137,6 @@
 											public: showInLobby
 										})
 									);
-								} else if (ws?.readyState === WebSocket.CONNECTING) {
-									alert("Connection is not ready yet. Please wait.");
 								} else {
 									alert("Connection is closed. Please refresh the page.");
 								}
