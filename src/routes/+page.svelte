@@ -10,24 +10,23 @@
 	import { page } from "$app/stores";
 	import { goto } from "$app/navigation";
 	import { gameState } from "$lib/store/game-state";
-	import { onMount } from "svelte";
 	import ServerWait from "$lib/components/server-wait.svelte";
 	let showInLobby = true;
 	let joinCode = "";
 	let connectionLoading = false;
 
-	if (ws)
-		ws.onopen = () => {
-			ws?.send(JSON.stringify({ type: "store_email", email: $page.data.session?.user?.email }));
-		};
-
-	onMount(() => {
+	$: {
 		if (ws) {
 			if (ws.readyState === WebSocket.CONNECTING) {
 				connectionLoading = true;
 			} else {
 				connectionLoading = false;
 			}
+
+			ws.onopen = () => {
+				ws?.send(JSON.stringify({ type: "store_email", email: $page.data.session?.user?.email }));
+				connectionLoading = false;
+			};
 
 			ws.onmessage = (event: MessageEvent) => {
 				const data = JSON.parse(event.data);
@@ -46,7 +45,7 @@
 				}
 			};
 		}
-	});
+	}
 </script>
 
 {#if connectionLoading}

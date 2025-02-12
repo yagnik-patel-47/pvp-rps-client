@@ -3,7 +3,6 @@
 	import Nav from "$lib/components/nav.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import { Skeleton } from "$lib/components/ui/skeleton";
-	import { onMount } from "svelte";
 	import { page } from "$app/stores";
 	import { gameState } from "$lib/store/game-state";
 	import { goto } from "$app/navigation";
@@ -13,15 +12,25 @@
 		showData = false;
 	let connectionLoading = false;
 
-	onMount(() => {
+	$: {
 		if (ws?.readyState === WebSocket.CONNECTING) {
 			connectionLoading = true;
 		} else {
 			connectionLoading = false;
 		}
 
-		if (ws?.readyState === WebSocket.OPEN) {
-			ws.send(JSON.stringify({ type: "fetch_public_rooms" }));
+		if (ws) {
+			ws.onopen = () => {
+				ws?.send(JSON.stringify({ type: "store_email", email: $page.data.session?.user?.email }));
+				ws?.send(JSON.stringify({ type: "fetch_public_rooms" }));
+				connectionLoading = false;
+			};
+
+			if (ws?.readyState === WebSocket.OPEN) {
+				ws.send(JSON.stringify({ type: "fetch_public_rooms" }));
+			} else if (ws?.readyState === WebSocket.CLOSED) {
+				alert("Connection is closed. Please refresh the page.");
+			}
 
 			ws.onmessage = (event) => {
 				const data = JSON.parse(event.data);
@@ -43,10 +52,8 @@
 					goto("/lobby");
 				}
 			};
-		} else if (ws?.readyState === WebSocket.CLOSED) {
-			alert("Connection is closed. Please refresh the page.");
 		}
-	});
+	}
 </script>
 
 {#if connectionLoading}
